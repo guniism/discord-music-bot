@@ -5,6 +5,7 @@ import {
   type Interaction,
 } from "discord.js";
 import "../types.ts";
+import { isGuildAllowed } from "../db/database.ts";
 
 export const name = Events.InteractionCreate;
 export const once = false;
@@ -30,6 +31,28 @@ export async function execute(interaction: Interaction): Promise<void> {
   if (!command) {
     console.error(`No command matching ${interaction.commandName} was found.`);
     return;
+  }
+
+  const ownerOnly = command.data.name !== "setup";
+
+  if (ownerOnly && interaction.user.id !== process.env.OWNER_ID) {
+    await interaction.reply({
+      content: "Only the bot owner can use this command.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const bypassGuildCheck = ["setup", "allow", "servers"];
+
+  if (!bypassGuildCheck.includes(command.data.name) && interaction.guild) {
+    if (!isGuildAllowed(interaction.guild.id)) {
+      await interaction.reply({
+        content: "This server is not set up yet. Run `/setup` first, or contact the bot owner.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
   }
 
   const { cooldowns } = interaction.client;
@@ -63,16 +86,13 @@ export async function execute(interaction: Interaction): Promise<void> {
     await command.execute(interaction);
   } catch (error) {
     console.error(error);
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({
-        content: "There was an error while executing this command!",
-        flags: MessageFlags.Ephemeral,
-      });
-    } else {
-      await interaction.reply({
-        content: "There was an error while executing this command!",
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+    const payload = {
+      content: "There was an error while executing this command!",
+      flags: MessageFlags.Ephemeral,
+    } as const;
+    await (interaction.replied || interaction.deferred
+      ? interaction.followUp(payload)
+      : interaction.reply(payload)
+    ).catch((replyError: unknown) => console.error("[REPLY FAILED]", replyError));
   }
 }

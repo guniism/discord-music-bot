@@ -37,7 +37,7 @@ export async function execute(
   const ephemeral = interaction.options.getBoolean("ephemeral") ?? false;
 
   if (channel) {
-    if (!channel.isTextBased() || !("send" in channel)) {
+    if (!("send" in channel)) {
       await interaction.reply({
         content: "That channel can't receive messages.",
         flags: MessageFlags.Ephemeral,
