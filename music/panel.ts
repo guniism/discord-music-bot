@@ -51,7 +51,7 @@ export function buildPanelEmbed(
       embed.setURL(track.url);
     }
 
-    if (status) {
+    if (status && status !== "Now playing") {
       embed.setDescription(status);
     }
 
