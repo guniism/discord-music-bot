@@ -15,11 +15,63 @@ A Discord bot that plays music from YouTube in voice channels. Each server gets 
 ## Requirements
 
 - [Node.js](https://nodejs.org) 22 or newer (uses the built-in `node:sqlite` module)
-- [FFmpeg](https://ffmpeg.org) (on macOS: `brew install ffmpeg`)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (on macOS: `brew install yt-dlp`)
+- [FFmpeg](https://ffmpeg.org)
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - A Discord application with a bot user
 
 No YouTube API key is required. Search and playback use `yt-dlp`.
+
+### Install on macOS
+
+```bash
+brew install node@22 ffmpeg yt-dlp
+```
+
+### Install on Linux (Debian/Ubuntu)
+
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+
+Node.js 22 is not in older `apt` repos. Install it with [nvm](https://github.com/nvm-sh/nvm) or from [nodejs.org](https://nodejs.org):
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+source ~/.bashrc
+nvm install 22
+```
+
+For yt-dlp, the `apt` package is often outdated and YouTube breaks old versions. Install the latest binary instead:
+
+```bash
+sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+sudo chmod a+rx /usr/local/bin/yt-dlp
+```
+
+Other distributions (Fedora, Arch) use their own package managers: `sudo dnf install ffmpeg` or `sudo pacman -S ffmpeg yt-dlp`.
+
+### Install on Windows
+
+Open PowerShell and use [winget](https://learn.microsoft.com/windows/package-manager/winget/):
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+winget install Gyan.FFmpeg
+winget install yt-dlp.yt-dlp
+```
+
+Node.js LTS must be version 22 or newer. Check with `node --version` and close and reopen the terminal after installing so the new commands are on your `PATH`.
+
+Verify all three tools:
+
+```bash
+node --version
+ffmpeg -version
+yt-dlp --version
+```
+
+Windows-only note: the `@discordjs/opus` package may need build tools if no prebuilt binary matches your Node version. If `npm install` fails on it, install the [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload, then run `npm install` again.
 
 ## Discord setup
 
@@ -27,7 +79,6 @@ No YouTube API key is required. Search and playback use `yt-dlp`.
 2. Under **Bot**:
    - Copy the bot token.
    - Enable **Message Content Intent** (required to read song names).
-   - Enable **Server Members Intent** is not required.
 3. Invite the bot to your server with the `bot` and `applications.commands` scopes. The bot needs these permissions in the music channel: **View Channel**, **Send Messages**, **Manage Messages**, **Read Message History**, **Add Reactions**, **Connect**, and **Speak**. It also needs **Manage Channels** to create the music channel during setup.
 
 ## Installation
