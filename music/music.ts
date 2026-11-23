@@ -35,12 +35,15 @@ interface GuildMusic {
   onTrackChange?: (track: Track) => void;
   onError?: (track: Track, reason: string) => void;
   onQueueEmpty?: () => void;
+  onIdleTimeout?: () => void;
   processes: { ytdlp: ChildProcess; ffmpeg: ChildProcess } | null;
+  idleTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const states = new Map<string, GuildMusic>();
 
 const MAX_PLAYLIST_TRACKS = 50;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const RETRY_DELAY_MS = 2_000;
 
 async function withRetry<T>(task: () => Promise<T>): Promise<T> {
@@ -154,6 +157,7 @@ async function ensureState(
     paused: false,
     textChannel: null,
     processes: null,
+    idleTimer: null,
   };
 
   player.on(AudioPlayerStatus.Playing, () => {
@@ -190,9 +194,11 @@ async function playNext(guildId: string): Promise<void> {
     state.current = null;
     state.paused = false;
     state.onQueueEmpty?.();
+    startIdleTimer(state, guildId);
     return;
   }
 
+  clearIdleTimer(state);
   killProcesses(state);
 
   try {
@@ -272,6 +278,23 @@ function killProcesses(state: GuildMusic): void {
   state.processes = null;
 }
 
+function clearIdleTimer(state: GuildMusic): void {
+  if (state.idleTimer) {
+    clearTimeout(state.idleTimer);
+    state.idleTimer = null;
+  }
+}
+
+function startIdleTimer(state: GuildMusic, guildId: string): void {
+  clearIdleTimer(state);
+  state.idleTimer = setTimeout(() => {
+    state.idleTimer = null;
+    console.log(`[MUSIC] Idle timeout reached for guild ${guildId}, disconnecting.`);
+    state.onIdleTimeout?.();
+    stop(guildId);
+  }, IDLE_TIMEOUT_MS);
+}
+
 export async function enqueue(
   guild: Guild,
   voiceChannel: VoiceBasedChannel,
@@ -280,12 +303,15 @@ export async function enqueue(
   onTrackChange: (track: Track) => void,
   onError?: (track: Track, reason: string) => void,
   onQueueEmpty?: () => void,
+  onIdleTimeout?: () => void,
 ): Promise<{ position: number; playingNow: boolean }> {
   const state = await ensureState(guild, voiceChannel);
   state.textChannel = textChannel;
   state.onTrackChange = onTrackChange;
   state.onError = onError;
   state.onQueueEmpty = onQueueEmpty;
+  state.onIdleTimeout = onIdleTimeout;
+  clearIdleTimer(state);
   state.queue.push(track);
 
   const playingNow = state.current === null;
@@ -357,6 +383,7 @@ export function clearQueue(guildId: string): number {
 export function stop(guildId: string): void {
   const state = states.get(guildId);
   if (state) {
+    clearIdleTimer(state);
     killProcesses(state);
     state.queue = [];
     state.current = null;

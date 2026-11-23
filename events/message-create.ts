@@ -104,6 +104,10 @@ export async function execute(message: Message): Promise<void> {
       () => {
         void updatePanel(channel, panelId, null);
       },
+      () => {
+        void updatePanel(channel, panelId, null);
+        void sendTemporary(channel, "Disconnected due to inactivity.");
+      },
     );
 
     if (!playingNow) {
